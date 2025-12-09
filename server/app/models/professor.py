@@ -22,7 +22,7 @@ class Professor(Base):
     total_reviews = Column(Integer, default=0)
     
     # Relationships
-    # reviews = relationship("Review", back_populates="professor")  # Uncomment in Phase 3
+    reviews = relationship("Review", backref="professor", foreign_keys="Review.professor_id")
 
     def __repr__(self):
         return f"<Professor(id={self.id}, name='{self.name}', dept='{self.department}')>"

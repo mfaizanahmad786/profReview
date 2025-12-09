@@ -37,6 +37,14 @@ export const createReview = (reviewData) => {
   return api.post('/reviews', reviewData);
 };
 
+export const updateReview = (reviewId, reviewData) => {
+  return api.put(`/reviews/${reviewId}`, reviewData);
+};
+
+export const deleteReview = (reviewId) => {
+  return api.delete(`/reviews/${reviewId}`);
+};
+
 // Auth API calls
 export const login = (email, password) => {
   const formData = new FormData();
@@ -51,6 +59,28 @@ export const signup = (email, password) => {
 
 export const getCurrentUser = () => {
   return api.get('/auth/me');
+};
+
+// Follow API calls
+export const followProfessor = (professorId) => {
+  return api.post(`/professors/${professorId}/follow`);
+};
+
+export const unfollowProfessor = (professorId) => {
+  return api.delete(`/professors/${professorId}/unfollow`);
+};
+
+export const checkIsFollowing = (professorId) => {
+  return api.get(`/professors/${professorId}/is-following`);
+};
+
+export const getFollowedProfessors = () => {
+  return api.get('/professors/following/list');
+};
+
+// Dashboard API calls
+export const getDashboardData = () => {
+  return api.get('/dashboard/me');
 };
 
 export default api;

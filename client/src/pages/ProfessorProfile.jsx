@@ -1,24 +1,74 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FaStar, FaRegClipboard, FaEdit, FaArrowLeft } from 'react-icons/fa';
+import { FaStar, FaRegClipboard, FaEdit, FaArrowLeft, FaHeart, FaRegHeart } from 'react-icons/fa';
 import StatCard from '../components/StatCard';
 import GradeDistributionChart from '../components/GradeDistributionChart';
 import ReviewCard from '../components/ReviewCard';
 import SimilarProfessorCard from '../components/SimilarProfessorCard';
 import DepartmentAvatar from '../components/DepartmentAvatar';
-import { getProfessor, getProfessorReviews, getGradeDistribution, getProfessors } from '../services/api';
+import ReviewModal from '../components/ReviewModal';
+import { useAuth } from '../context/AuthContext';
+import { 
+  getProfessor, 
+  getProfessorReviews, 
+  getGradeDistribution, 
+  getProfessors,
+  followProfessor,
+  unfollowProfessor,
+  checkIsFollowing
+} from '../services/api';
 
 export default function ProfessorProfile() {
   const { id } = useParams();
+  const { isAuthenticated } = useAuth();
   const [professor, setProfessor] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [gradeData, setGradeData] = useState([]);
   const [similarProfessors, setSimilarProfessors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     loadProfessorData();
   }, [id]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      checkFollowStatus();
+    }
+  }, [id, isAuthenticated]);
+
+  const checkFollowStatus = async () => {
+    try {
+      const response = await checkIsFollowing(id);
+      setIsFollowing(response.data.is_following);
+    } catch (err) {
+      console.error('Failed to check follow status:', err);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await unfollowProfessor(id);
+        setIsFollowing(false);
+      } else {
+        await followProfessor(id);
+        setIsFollowing(true);
+      }
+    } catch (err) {
+      console.error('Failed to toggle follow:', err);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   const loadProfessorData = async () => {
     try {
@@ -114,10 +164,27 @@ export default function ProfessorProfile() {
                     <p className="text-gray-400 text-sm">Tech University • Since 2018</p>
                   </div>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition text-gray-600">
-                  <FaRegClipboard />
-                  <span>Claim Profile</span>
-                </button>
+                
+                <div className="flex items-center gap-2">
+                  {isAuthenticated && (
+                    <button
+                      onClick={handleFollowToggle}
+                      disabled={followLoading}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                        isFollowing
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                      } disabled:opacity-50`}
+                    >
+                      {isFollowing ? <FaHeart /> : <FaRegHeart />}
+                      <span>{isFollowing ? 'Following' : 'Follow'}</span>
+                    </button>
+                  )}
+                  <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition text-gray-600">
+                    <FaRegClipboard />
+                    <span>Claim</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -149,7 +216,10 @@ export default function ProfessorProfile() {
                 <h2 className="text-xl font-semibold text-gray-800">
                   Student Reviews ({reviews.length})
                 </h2>
-                <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                <button 
+                  onClick={() => setShowReviewModal(true)}
+                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
                   <FaEdit />
                   <span>Write a Review</span>
                 </button>
@@ -189,6 +259,15 @@ export default function ProfessorProfile() {
           </div>
         </div>
       </div>
+      
+      {/* Review Modal */}
+      {showReviewModal && professor && (
+        <ReviewModal
+          professor={professor}
+          onClose={() => setShowReviewModal(false)}
+          onReviewSubmitted={loadProfessorData}
+        />
+      )}
     </div>
   );
 }

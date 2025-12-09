@@ -20,54 +20,57 @@ import {
   FaBrain
 } from 'react-icons/fa';
 
-// Department configuration with colors and icons
+// Unified color for all departments
+const UNIFIED_COLORS = ['#3b82f6', '#06b6d4']; // blue to cyan
+
+// Department configuration with icons
 const DEPARTMENT_CONFIG = {
   'computer': {
-    colors: ['#3b82f6', '#06b6d4'], // blue to cyan
+    colors: UNIFIED_COLORS,
     icons: [FaCode, FaLaptopCode, FaDatabase],
   },
   'math': {
-    colors: ['#a855f7', '#ec4899'], // purple to pink
+    colors: UNIFIED_COLORS,
     icons: [FaCalculator, FaSuperscript],
   },
   'physics': {
-    colors: ['#f97316', '#ef4444'], // orange to red
+    colors: UNIFIED_COLORS,
     icons: [FaAtom, FaFlask],
   },
   'chemistry': {
-    colors: ['#22c55e', '#14b8a6'], // green to teal
+    colors: UNIFIED_COLORS,
     icons: [FaFlask, FaMicroscope],
   },
   'biology': {
-    colors: ['#10b981', '#16a34a'], // emerald to green
+    colors: UNIFIED_COLORS,
     icons: [FaDna, FaMicroscope],
   },
   'economics': {
-    colors: ['#f59e0b', '#eab308'], // amber to yellow
+    colors: UNIFIED_COLORS,
     icons: [FaChartLine, FaBalanceScale],
   },
   'literature': {
-    colors: ['#f43f5e', '#ec4899'], // rose to pink
+    colors: UNIFIED_COLORS,
     icons: [FaBook, FaPencilAlt],
   },
   'psychology': {
-    colors: ['#8b5cf6', '#7c3aed'], // violet to purple
+    colors: UNIFIED_COLORS,
     icons: [FaBrain, FaHeart],
   },
   'geography': {
-    colors: ['#0ea5e9', '#2563eb'], // sky to blue
+    colors: UNIFIED_COLORS,
     icons: [FaGlobe],
   },
   'music': {
-    colors: ['#d946ef', '#a855f7'], // fuchsia to purple
+    colors: UNIFIED_COLORS,
     icons: [FaMusic],
   },
   'art': {
-    colors: ['#ec4899', '#f43f5e'], // pink to rose
+    colors: UNIFIED_COLORS,
     icons: [FaPalette],
   },
   'default': {
-    colors: ['#6b7280', '#475569'], // gray to slate
+    colors: UNIFIED_COLORS,
     icons: [FaGraduationCap],
   }
 };

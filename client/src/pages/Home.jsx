@@ -41,9 +41,9 @@ export default function Home() {
   };
 
   const stats = [
-    { icon: <FaUsers />, value: '10,000+', label: 'Active Students' },
-    { icon: <FaStar />, value: '25,000+', label: 'Reviews Posted' },
-    { icon: <FaGraduationCap />, value: '500+', label: 'Professors Listed' },
+    { icon: <FaUsers />, value: '1000+', label: 'Active Students' },
+    { icon: <FaStar />, value: '2500+', label: 'Reviews Posted' },
+    { icon: <FaGraduationCap />, value: '100+', label: 'Professors Listed' },
   ];
 
   return (
@@ -100,7 +100,7 @@ export default function Home() {
             </form>
 
             {/* Quick Stats */}
-            <div className="flex flex-wrap justify-center gap-8 mt-12">
+            {/* <div className="flex flex-wrap justify-center gap-8 mt-12">
               {stats.map((stat, idx) => (
                 <div key={idx} className="flex items-center gap-3 text-white/80">
                   <div className="text-2xl text-blue-200">{stat.icon}</div>
@@ -110,7 +110,7 @@ export default function Home() {
                   </div>
                 </div>
               ))}
-            </div>
+            </div> */}
           </div>
         </div>
 

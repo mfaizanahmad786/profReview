@@ -21,6 +21,14 @@ class User(Base):
     password_hash = Column(String(256), nullable=False)
     role = Column(SQLEnum(UserRole), default=UserRole.STUDENT, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    reviews = relationship("Review", backref="student", foreign_keys="Review.student_id")
+    followed_professors = relationship(
+        "Professor",
+        secondary="professor_follows",
+        backref="followers"
+    )
 
 
     def __repr__(self):

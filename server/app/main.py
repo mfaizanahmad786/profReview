@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers.auth import router as auth_router
 from app.routers.professors import router as professors_router
 from app.routers.reviews import router as reviews_router
+from app.routers.dashboard import router as dashboard_router
 
 # Create the FastAPI application instance
 app = FastAPI(
@@ -29,6 +30,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(professors_router)
 app.include_router(reviews_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/")

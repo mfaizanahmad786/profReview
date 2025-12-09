@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
-import { FaGraduationCap, FaSearch, FaUser } from 'react-icons/fa';
+import { FaGraduationCap, FaSearch, FaUser, FaSignOutAlt } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
+  const { isAuthenticated, user, logout } = useAuth();
+
   return (
     <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -34,13 +37,52 @@ export default function Navbar() {
             >
               Home
             </Link>
-            <Link 
-              to="/login" 
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-            >
-              <FaUser className="text-sm" />
-              <span>Login</span>
-            </Link>
+            
+            {isAuthenticated ? (
+              <>
+                {/* Dashboard Link */}
+                <Link 
+                  to="/dashboard" 
+                  className="text-gray-600 hover:text-blue-600 font-medium transition"
+                >
+                  Dashboard
+                </Link>
+                
+                {/* User Info */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+                  <FaUser className="text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {user?.email?.split('@')[0]}
+                  </span>
+                </div>
+                
+                {/* Logout Button */}
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                  title="Logout"
+                >
+                  <FaSignOutAlt />
+                  <span className="hidden sm:inline">Logout</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <Link 
+                  to="/login" 
+                  className="text-gray-600 hover:text-blue-600 font-medium transition"
+                >
+                  Login
+                </Link>
+                <Link 
+                  to="/signup" 
+                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
+                  <FaUser className="text-sm" />
+                  <span>Sign Up</span>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
