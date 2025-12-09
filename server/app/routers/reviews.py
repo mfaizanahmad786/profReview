@@ -8,6 +8,7 @@ from datetime import datetime
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
+from app.core.content_filter import contains_profanity
 from app.models.user import User
 from app.models.professor import Professor
 from app.models.review import Review, GradeEnum
@@ -74,6 +75,7 @@ def create_review(
     Create a new review for a professor.
     - Requires authentication
     - One review per professor per semester per student
+    - Validates content for profanity
     """
     # Check if professor exists
     professor = db.query(Professor).filter(Professor.id == review_data.professor_id).first()
@@ -82,6 +84,15 @@ def create_review(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Professor not found"
         )
+    
+    # Check for profanity in comment
+    if review_data.comment:
+        is_profane, reason = contains_profanity(review_data.comment)
+        if is_profane:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Your review contains {reason}. Please keep your feedback respectful."
+            )
     
     # Check if user already reviewed this professor this semester
     existing_review = db.query(Review).filter(
@@ -235,6 +246,15 @@ def update_review(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot edit review - semester has ended"
         )
+    
+    # Check for profanity if comment is being updated
+    if review_data.comment is not None:
+        is_profane, reason = contains_profanity(review_data.comment)
+        if is_profane:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Your review contains {reason}. Please keep your feedback respectful."
+            )
     
     # Update only provided fields
     if review_data.rating_quality is not None:
