@@ -30,6 +30,7 @@ class User(Base):
         backref="followers"
     )
     review_votes = relationship("ReviewVote", back_populates="user", cascade="all, delete-orphan")
+    review_flags_created = relationship("ReviewFlag", back_populates="user", cascade="all, delete-orphan")
 
 
     def __repr__(self):

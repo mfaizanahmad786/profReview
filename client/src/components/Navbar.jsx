@@ -40,8 +40,15 @@ export default function Navbar() {
             
             {isAuthenticated ? (
               <>
-                {/* Dashboard Link - Different for Student vs Professor */}
-                {user?.role === 'professor' ? (
+                {/* Dashboard Link - Different for Student vs Professor vs Admin */}
+                {user?.role === 'admin' ? (
+                  <Link 
+                    to="/admin-dashboard" 
+                    className="text-gray-600 hover:text-blue-600 font-medium transition"
+                  >
+                    Admin Dashboard
+                  </Link>
+                ) : user?.role === 'professor' ? (
                   <Link 
                     to="/professor-dashboard" 
                     className="text-gray-600 hover:text-blue-600 font-medium transition"
@@ -66,6 +73,9 @@ export default function Navbar() {
                     </span>
                     {user?.role === 'professor' && (
                       <span className="text-xs text-blue-600 font-medium">Professor</span>
+                    )}
+                    {user?.role === 'admin' && (
+                      <span className="text-xs text-purple-600 font-medium">Admin</span>
                     )}
                   </div>
                 </div>

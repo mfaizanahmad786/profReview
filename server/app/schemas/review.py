@@ -52,6 +52,9 @@ class ReviewResponse(BaseModel):
     created_at: datetime
     helpful_count: int = 0
     user_voted: Optional[bool] = None  # Whether current user has voted
+    is_flagged: bool = False
+    flag_count: int = 0
+    user_flagged: Optional[bool] = None  # Whether current user has flagged this review
     
     class Config:
         from_attributes = True

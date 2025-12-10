@@ -1,7 +1,7 @@
 """Review Database Model - The heart of grade distribution data"""
 
 import enum
-from sqlalchemy import Column, Integer, String, Text, DateTime, Enum as SQLEnum, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, DateTime, Enum as SQLEnum, ForeignKey, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -48,12 +48,17 @@ class Review(Base):
     # Vote tracking
     helpful_count = Column(Integer, default=0, nullable=False)  # Cache for performance
     
+    # Flag tracking
+    is_flagged = Column(Boolean, default=False, nullable=False)
+    flag_count = Column(Integer, default=0, nullable=False)
+    
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     is_hidden = Column(Integer, default=0)  # For admin moderation
     
     # Relationships
     votes = relationship("ReviewVote", back_populates="review", cascade="all, delete-orphan")
+    flags = relationship("ReviewFlag", back_populates="review", cascade="all, delete-orphan")
     
     # Prevent duplicate reviews: 1 review per professor per semester
     __table_args__ = (

@@ -112,5 +112,30 @@ export const cancelClaimRequest = (claimId) => {
   return api.delete(`/professors/claim-request/${claimId}`);
 };
 
+// Flag API calls
+export const flagReview = (reviewId, reason = null) => {
+  return api.post(`/reviews/${reviewId}/flag`, {
+    review_id: reviewId,
+    reason: reason
+  });
+};
+
+export const unflagReview = (reviewId) => {
+  return api.delete(`/reviews/${reviewId}/flag`);
+};
+
+// Admin API calls
+export const getFlaggedReviews = () => {
+  return api.get('/admin/flagged-reviews');
+};
+
+export const deleteReviewAsAdmin = (reviewId) => {
+  return api.delete(`/admin/reviews/${reviewId}`);
+};
+
+export const dismissFlags = (reviewId) => {
+  return api.post(`/admin/reviews/${reviewId}/dismiss-flags`);
+};
+
 export default api;
 

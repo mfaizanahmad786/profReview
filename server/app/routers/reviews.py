@@ -13,8 +13,10 @@ from app.models.user import User
 from app.models.professor import Professor
 from app.models.review import Review, GradeEnum
 from app.models.review_vote import ReviewVote
+from app.models.review_flag import ReviewFlag
 from app.models.user import UserRole
 from app.schemas.review import ReviewCreate, ReviewUpdate, ReviewResponse
+from app.schemas.review_flag import FlagCreate, FlagResponse
 
 
 router = APIRouter(prefix="/reviews", tags=["Reviews"])
@@ -353,8 +355,8 @@ def _update_professor_stats(db: Session, professor_id: int):
 
 def _enrich_review_with_vote_info(review: Review, current_user_id: Optional[int], db: Session) -> ReviewResponse:
     """
-    Helper function to add vote information to a review response.
-    Adds helpful_count and whether current user has voted.
+    Helper function to add vote and flag information to a review response.
+    Adds helpful_count, user_voted, is_flagged, flag_count, and user_flagged.
     """
     review_dict = {
         "id": review.id,
@@ -368,16 +370,25 @@ def _enrich_review_with_vote_info(review: Review, current_user_id: Optional[int]
         "semester": review.semester,
         "created_at": review.created_at,
         "helpful_count": review.helpful_count,
-        "user_voted": False
+        "user_voted": False,
+        "is_flagged": review.is_flagged,
+        "flag_count": review.flag_count,
+        "user_flagged": False
     }
     
-    # Check if current user has voted
+    # Check if current user has voted or flagged
     if current_user_id:
         user_vote = db.query(ReviewVote).filter(
             ReviewVote.review_id == review.id,
             ReviewVote.user_id == current_user_id
         ).first()
         review_dict["user_voted"] = user_vote is not None
+        
+        user_flag = db.query(ReviewFlag).filter(
+            ReviewFlag.review_id == review.id,
+            ReviewFlag.user_id == current_user_id
+        ).first()
+        review_dict["user_flagged"] = user_flag is not None
     
     return ReviewResponse(**review_dict)
 
@@ -471,5 +482,110 @@ async def unvote_review(
     db.commit()
     
     return {"helpful_count": review.helpful_count, "user_voted": False}
+
+
+@router.post("/{review_id}/flag", status_code=status.HTTP_201_CREATED)
+async def flag_review(
+    review_id: int,
+    flag_data: FlagCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Flag a review as inappropriate.
+    - Requires authentication
+    - Any user (student or professor) can flag
+    - One flag per user per review
+    """
+    # Check if review exists
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review not found"
+        )
+    
+    # Check if user already flagged this review
+    existing_flag = db.query(ReviewFlag).filter(
+        ReviewFlag.review_id == review_id,
+        ReviewFlag.user_id == current_user.id
+    ).first()
+    
+    if existing_flag:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You have already flagged this review"
+        )
+    
+    # Create new flag
+    new_flag = ReviewFlag(
+        user_id=current_user.id,
+        review_id=review_id,
+        reason=flag_data.reason
+    )
+    
+    db.add(new_flag)
+    
+    # Update review flag count and status
+    review.flag_count += 1
+    review.is_flagged = True
+    
+    db.commit()
+    db.refresh(new_flag)
+    
+    return {
+        "message": "Review flagged successfully",
+        "flag_count": review.flag_count,
+        "user_flagged": True
+    }
+
+
+@router.delete("/{review_id}/flag", status_code=status.HTTP_200_OK)
+async def unflag_review(
+    review_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Remove flag from a review.
+    - Requires authentication
+    - Can only remove own flag
+    """
+    # Check if review exists
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review not found"
+        )
+    
+    # Find user's flag
+    flag = db.query(ReviewFlag).filter(
+        ReviewFlag.review_id == review_id,
+        ReviewFlag.user_id == current_user.id
+    ).first()
+    
+    if not flag:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Flag not found"
+        )
+    
+    # Delete flag
+    db.delete(flag)
+    
+    # Update review flag count and status
+    review.flag_count = max(0, review.flag_count - 1)
+    if review.flag_count == 0:
+        review.is_flagged = False
+    
+    db.commit()
+    
+    return {
+        "message": "Flag removed successfully",
+        "flag_count": review.flag_count,
+        "user_flagged": False
+    }
+
 
 

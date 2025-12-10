@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { FaThumbsUp, FaFlag } from 'react-icons/fa';
-import { voteReview, unvoteReview } from '../services/api';
+import { voteReview, unvoteReview, flagReview, unflagReview } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function ReviewCard({ review: initialReview }) {
   const { user } = useAuth();
   const [review, setReview] = useState(initialReview);
   const [isVoting, setIsVoting] = useState(false);
+  const [isFlagging, setIsFlagging] = useState(false);
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [flagReason, setFlagReason] = useState('');
 
   const tags = ['Clear Grading', 'Helpful']; // Mock tags for now
 
@@ -54,6 +57,61 @@ export default function ReviewCard({ review: initialReview }) {
       }
     } finally {
       setIsVoting(false);
+    }
+  };
+
+  const handleFlagClick = () => {
+    if (!user) {
+      alert('Please log in to flag reviews');
+      return;
+    }
+    
+    if (review.user_flagged) {
+      handleUnflag();
+    } else {
+      setShowFlagModal(true);
+    }
+  };
+
+  const handleFlagSubmit = async () => {
+    if (isFlagging) return;
+    
+    setIsFlagging(true);
+    try {
+      const response = await flagReview(review.id, flagReason || null);
+      setReview({
+        ...review,
+        flag_count: response.data.flag_count,
+        user_flagged: true,
+        is_flagged: true
+      });
+      setShowFlagModal(false);
+      setFlagReason('');
+    } catch (error) {
+      console.error('Error flagging review:', error);
+      alert(error.response?.data?.detail || 'Failed to flag review');
+    } finally {
+      setIsFlagging(false);
+    }
+  };
+
+  const handleUnflag = async () => {
+    if (isFlagging) return;
+    
+    setIsFlagging(true);
+    try {
+      const response = await unflagReview(review.id);
+      setReview({
+        ...review,
+        flag_count: response.data.flag_count,
+        user_flagged: false,
+        is_flagged: response.data.flag_count > 0
+      });
+    } catch (error) {
+      console.error('Error unflagging review:', error);
+      alert(error.response?.data?.detail || 'Failed to unflag review');
+    } finally {
+      setIsFlagging(false);
     }
   };
 
@@ -116,12 +174,58 @@ export default function ReviewCard({ review: initialReview }) {
             <FaThumbsUp className={review.user_voted ? 'fill-current' : ''} />
             <span>Helpful ({review.helpful_count || 0})</span>
           </button>
-          <button className="flex items-center gap-1 text-gray-400 hover:text-red-500 transition text-sm">
-            <FaFlag />
-            <span>Flag</span>
+          <button 
+            onClick={handleFlagClick}
+            disabled={isFlagging}
+            className={`flex items-center gap-1 transition text-sm ${
+              review.user_flagged 
+                ? 'text-red-600 hover:text-red-700' 
+                : 'text-gray-400 hover:text-red-500'
+            } ${isFlagging ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <FaFlag className={review.user_flagged ? 'fill-current' : ''} />
+            <span>{review.user_flagged ? 'Flagged' : 'Flag'}</span>
           </button>
         </div>
       </div>
+
+      {/* Flag Modal */}
+      {showFlagModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Flag Review</h3>
+            <p className="text-gray-600 mb-4">
+              Please let us know why this review is inappropriate. Our moderators will review it.
+            </p>
+            <textarea
+              value={flagReason}
+              onChange={(e) => setFlagReason(e.target.value)}
+              placeholder="Reason for flagging (optional)"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+              rows="4"
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowFlagModal(false);
+                  setFlagReason('');
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                disabled={isFlagging}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFlagSubmit}
+                disabled={isFlagging}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {isFlagging ? 'Flagging...' : 'Flag Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
