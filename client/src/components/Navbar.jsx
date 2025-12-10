@@ -40,20 +40,34 @@ export default function Navbar() {
             
             {isAuthenticated ? (
               <>
-                {/* Dashboard Link */}
-                <Link 
-                  to="/dashboard" 
-                  className="text-gray-600 hover:text-blue-600 font-medium transition"
-                >
-                  Dashboard
-                </Link>
+                {/* Dashboard Link - Different for Student vs Professor */}
+                {user?.role === 'professor' ? (
+                  <Link 
+                    to="/professor-dashboard" 
+                    className="text-gray-600 hover:text-blue-600 font-medium transition"
+                  >
+                    My Dashboard
+                  </Link>
+                ) : (
+                  <Link 
+                    to="/dashboard" 
+                    className="text-gray-600 hover:text-blue-600 font-medium transition"
+                  >
+                    My Dashboard
+                  </Link>
+                )}
                 
-                {/* User Info */}
+                {/* User Info with Role Badge */}
                 <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
                   <FaUser className="text-blue-600" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {user?.email?.split('@')[0]}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-700">
+                      {user?.email?.split('@')[0]}
+                    </span>
+                    {user?.role === 'professor' && (
+                      <span className="text-xs text-blue-600 font-medium">Professor</span>
+                    )}
+                  </div>
                 </div>
                 
                 {/* Logout Button */}

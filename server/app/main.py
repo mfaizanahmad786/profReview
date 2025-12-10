@@ -9,6 +9,7 @@ from app.routers.auth import router as auth_router
 from app.routers.professors import router as professors_router
 from app.routers.reviews import router as reviews_router
 from app.routers.dashboard import router as dashboard_router
+from app.routers.professor_claims import router as professor_claims_router
 
 # Create the FastAPI application instance
 app = FastAPI(
@@ -31,6 +32,7 @@ app.include_router(auth_router)
 app.include_router(professors_router)
 app.include_router(reviews_router)
 app.include_router(dashboard_router)
+app.include_router(professor_claims_router)
 
 
 @app.get("/")

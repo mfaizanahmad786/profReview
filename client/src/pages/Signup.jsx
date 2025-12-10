@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaGraduationCap, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaCheckCircle } from 'react-icons/fa';
+import { FaGraduationCap, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaUser, FaChalkboardTeacher } from 'react-icons/fa';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('student'); // New: role state
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +43,7 @@ export default function Signup() {
 
     setIsLoading(true);
 
-    const result = await signup(email, password);
+    const result = await signup(email, password, role);
     
     if (result.success) {
       navigate('/');
@@ -74,6 +75,44 @@ export default function Signup() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Role Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                I am a...
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole('student')}
+                  className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition ${
+                    role === 'student'
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                  }`}
+                >
+                  <FaUser className="text-lg" />
+                  <span className="font-medium">Student</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('professor')}
+                  className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition ${
+                    role === 'professor'
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                  }`}
+                >
+                  <FaChalkboardTeacher className="text-lg" />
+                  <span className="font-medium">Professor</span>
+                </button>
+              </div>
+              {role === 'professor' && (
+                <p className="mt-2 text-xs text-gray-500">
+                  As a professor, you'll be able to claim your profile and view analytics after admin approval.
+                </p>
+              )}
+            </div>
+
             {/* Email Input */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">

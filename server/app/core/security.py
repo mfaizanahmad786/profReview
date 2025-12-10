@@ -103,6 +103,22 @@ async def get_current_active_user(
     return current_user
 
 
+async def get_current_user_optional(
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False))
+) -> Optional[User]:
+    """Get the current user if authenticated, None otherwise (for optional auth)"""
+    if not token:
+        return None
+    
+    try:
+        token_data = decode_access_token(token)
+        user = db.query(User).filter(User.email == token_data.email).first()
+        return user
+    except:
+        return None
+
+
 def require_role(allowed_roles: list[str]):
     """Dependency to require specific user roles"""
     async def role_checker(current_user: User = Depends(get_current_user)):

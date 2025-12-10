@@ -1,6 +1,13 @@
+import { useState } from 'react';
 import { FaThumbsUp, FaFlag } from 'react-icons/fa';
+import { voteReview, unvoteReview } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-export default function ReviewCard({ review }) {
+export default function ReviewCard({ review: initialReview }) {
+  const { user } = useAuth();
+  const [review, setReview] = useState(initialReview);
+  const [isVoting, setIsVoting] = useState(false);
+
   const tags = ['Clear Grading', 'Helpful']; // Mock tags for now
 
   const formatDate = (dateString) => {
@@ -9,6 +16,45 @@ export default function ReviewCard({ review }) {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const handleVoteToggle = async () => {
+    if (!user) {
+      alert('Please log in to vote on reviews');
+      return;
+    }
+
+    if (isVoting) return;
+    
+    setIsVoting(true);
+    try {
+      if (review.user_voted) {
+        // Unvote
+        const response = await unvoteReview(review.id);
+        setReview({ 
+          ...review, 
+          helpful_count: response.data.helpful_count,
+          user_voted: false 
+        });
+      } else {
+        // Vote
+        const response = await voteReview(review.id);
+        setReview({ 
+          ...review, 
+          helpful_count: response.data.helpful_count,
+          user_voted: true 
+        });
+      }
+    } catch (error) {
+      console.error('Error voting:', error);
+      if (error.response?.status === 401) {
+        alert('Please log in to vote on reviews');
+      } else {
+        alert(error.response?.data?.detail || 'Failed to vote');
+      }
+    } finally {
+      setIsVoting(false);
+    }
   };
 
   return (
@@ -58,9 +104,17 @@ export default function ReviewCard({ review }) {
           <span className="font-semibold text-green-600">{review.grade_received}</span>
         </div>
         <div className="flex items-center gap-4">
-          <button className="flex items-center gap-1 text-gray-400 hover:text-blue-600 transition text-sm">
-            <FaThumbsUp />
-            <span>Helpful (12)</span>
+          <button 
+            onClick={handleVoteToggle}
+            disabled={isVoting}
+            className={`flex items-center gap-1 transition text-sm ${
+              review.user_voted 
+                ? 'text-blue-600 hover:text-blue-700' 
+                : 'text-gray-400 hover:text-blue-600'
+            } ${isVoting ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <FaThumbsUp className={review.user_voted ? 'fill-current' : ''} />
+            <span>Helpful ({review.helpful_count || 0})</span>
           </button>
           <button className="flex items-center gap-1 text-gray-400 hover:text-red-500 transition text-sm">
             <FaFlag />

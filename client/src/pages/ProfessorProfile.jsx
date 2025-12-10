@@ -7,6 +7,7 @@ import ReviewCard from '../components/ReviewCard';
 import SimilarProfessorCard from '../components/SimilarProfessorCard';
 import DepartmentAvatar from '../components/DepartmentAvatar';
 import ReviewModal from '../components/ReviewModal';
+import ClaimProfileButton from '../components/ClaimProfileButton';
 import { useAuth } from '../context/AuthContext';
 import { 
   getProfessor, 
@@ -20,7 +21,7 @@ import {
 
 export default function ProfessorProfile() {
   const { id } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [professor, setProfessor] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [gradeData, setGradeData] = useState([]);
@@ -180,10 +181,6 @@ export default function ProfessorProfile() {
                       <span>{isFollowing ? 'Following' : 'Follow'}</span>
                     </button>
                   )}
-                  <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition text-gray-600">
-                    <FaRegClipboard />
-                    <span>Claim</span>
-                  </button>
                 </div>
               </div>
             </div>
@@ -216,13 +213,16 @@ export default function ProfessorProfile() {
                 <h2 className="text-xl font-semibold text-gray-800">
                   Student Reviews ({reviews.length})
                 </h2>
-                <button 
-                  onClick={() => setShowReviewModal(true)}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                >
-                  <FaEdit />
-                  <span>Write a Review</span>
-                </button>
+                {/* Only show Write Review button for students, not professors */}
+                {isAuthenticated && user?.role !== 'professor' && (
+                  <button 
+                    onClick={() => setShowReviewModal(true)}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                  >
+                    <FaEdit />
+                    <span>Write a Review</span>
+                  </button>
+                )}
               </div>
 
               {reviews.length === 0 ? (
@@ -243,6 +243,12 @@ export default function ProfessorProfile() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Claim Profile Button - Only for Professors */}
+            <ClaimProfileButton 
+              professorId={professor.id} 
+              professorName={professor.name}
+            />
+
             {/* Similar Professors */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="font-semibold text-gray-800 mb-4">Similar Professors</h3>

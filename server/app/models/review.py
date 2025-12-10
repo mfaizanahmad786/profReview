@@ -45,9 +45,15 @@ class Review(Base):
     course_code = Column(String(20), nullable=True)  # e.g., "CS101"
     semester = Column(String(20), nullable=False)  # e.g., "Fall 2024"
     
+    # Vote tracking
+    helpful_count = Column(Integer, default=0, nullable=False)  # Cache for performance
+    
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     is_hidden = Column(Integer, default=0)  # For admin moderation
+    
+    # Relationships
+    votes = relationship("ReviewVote", back_populates="review", cascade="all, delete-orphan")
     
     # Prevent duplicate reviews: 1 review per professor per semester
     __table_args__ = (

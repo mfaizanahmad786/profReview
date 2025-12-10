@@ -3,15 +3,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user, require_role, get_current_user_optional
 from app.core.content_filter import contains_profanity
 from app.models.user import User
 from app.models.professor import Professor
 from app.models.review import Review, GradeEnum
+from app.models.review_vote import ReviewVote
+from app.models.user import UserRole
 from app.schemas.review import ReviewCreate, ReviewUpdate, ReviewResponse
 
 
@@ -76,7 +78,15 @@ def create_review(
     - Requires authentication
     - One review per professor per semester per student
     - Validates content for profanity
+    - Only students can post reviews
     """
+    # Block professors from creating reviews
+    if current_user.role == UserRole.PROFESSOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Professors cannot post reviews. Only students can review professors."
+        )
+    
     # Check if professor exists
     professor = db.query(Professor).filter(Professor.id == review_data.professor_id).first()
     if not professor:
@@ -130,11 +140,12 @@ def create_review(
 
 
 @router.get("/professor/{professor_id}", response_model=List[ReviewResponse])
-def get_professor_reviews(
+async def get_professor_reviews(
     professor_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Get all reviews for a specific professor"""
+    """Get all reviews for a specific professor with vote information"""
     # Check if professor exists
     professor = db.query(Professor).filter(Professor.id == professor_id).first()
     if not professor:
@@ -148,20 +159,22 @@ def get_professor_reviews(
         Review.is_hidden == 0
     ).order_by(Review.created_at.desc()).all()
     
-    return reviews
+    # Enrich with vote information
+    user_id = current_user.id if current_user else None
+    return [_enrich_review_with_vote_info(r, user_id, db) for r in reviews]
 
 
 @router.get("/me", response_model=List[ReviewResponse])
-def get_my_reviews(
+async def get_my_reviews(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get all reviews by the current logged-in user"""
+    """Get all reviews by the current logged-in user with vote information"""
     reviews = db.query(Review).filter(
         Review.student_id == current_user.id
     ).order_by(Review.created_at.desc()).all()
     
-    return reviews
+    return [_enrich_review_with_vote_info(r, current_user.id, db) for r in reviews]
 
 
 @router.get("/{review_id}", response_model=ReviewResponse)
@@ -336,4 +349,127 @@ def _update_professor_stats(db: Session, professor_id: int):
         professor.total_reviews = 0
     
     db.commit()
+
+
+def _enrich_review_with_vote_info(review: Review, current_user_id: Optional[int], db: Session) -> ReviewResponse:
+    """
+    Helper function to add vote information to a review response.
+    Adds helpful_count and whether current user has voted.
+    """
+    review_dict = {
+        "id": review.id,
+        "professor_id": review.professor_id,
+        "student_id": review.student_id,
+        "rating_quality": review.rating_quality,
+        "rating_difficulty": review.rating_difficulty,
+        "grade_received": review.grade_received.value,
+        "comment": review.comment,
+        "course_code": review.course_code,
+        "semester": review.semester,
+        "created_at": review.created_at,
+        "helpful_count": review.helpful_count,
+        "user_voted": False
+    }
+    
+    # Check if current user has voted
+    if current_user_id:
+        user_vote = db.query(ReviewVote).filter(
+            ReviewVote.review_id == review.id,
+            ReviewVote.user_id == current_user_id
+        ).first()
+        review_dict["user_voted"] = user_vote is not None
+    
+    return ReviewResponse(**review_dict)
+
+
+@router.post("/{review_id}/vote", status_code=status.HTTP_200_OK)
+async def vote_review(
+    review_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Vote a review as helpful.
+    - Requires authentication
+    - One vote per user per review
+    - Returns updated helpful count
+    """
+    # Check if review exists
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review not found"
+        )
+    
+    # Check if user already voted
+    existing_vote = db.query(ReviewVote).filter(
+        ReviewVote.review_id == review_id,
+        ReviewVote.user_id == current_user.id
+    ).first()
+    
+    if existing_vote:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You have already voted on this review"
+        )
+    
+    # Create vote
+    new_vote = ReviewVote(
+        user_id=current_user.id,
+        review_id=review_id,
+        vote_type="helpful"
+    )
+    
+    db.add(new_vote)
+    
+    # Update helpful count
+    review.helpful_count += 1
+    
+    db.commit()
+    
+    return {"helpful_count": review.helpful_count, "user_voted": True}
+
+
+@router.delete("/{review_id}/vote", status_code=status.HTTP_200_OK)
+async def unvote_review(
+    review_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Remove vote from a review.
+    - Requires authentication
+    - Can only remove own vote
+    """
+    # Check if review exists
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review not found"
+        )
+    
+    # Find user's vote
+    vote = db.query(ReviewVote).filter(
+        ReviewVote.review_id == review_id,
+        ReviewVote.user_id == current_user.id
+    ).first()
+    
+    if not vote:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vote not found"
+        )
+    
+    # Delete vote
+    db.delete(vote)
+    
+    # Update helpful count
+    review.helpful_count = max(0, review.helpful_count - 1)
+    
+    db.commit()
+    
+    return {"helpful_count": review.helpful_count, "user_voted": False}
+
 

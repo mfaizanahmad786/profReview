@@ -50,6 +50,8 @@ class ReviewResponse(BaseModel):
     course_code: Optional[str]
     semester: str
     created_at: datetime
+    helpful_count: int = 0
+    user_voted: Optional[bool] = None  # Whether current user has voted
     
     class Config:
         from_attributes = True

@@ -7,6 +7,7 @@ import ProfessorProfile from './pages/ProfessorProfile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import ProfessorDashboard from './pages/ProfessorDashboard';
 
 function App() {
   return (
@@ -24,6 +25,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/professor-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <ProfessorDashboard />
                 </ProtectedRoute>
               } 
             />

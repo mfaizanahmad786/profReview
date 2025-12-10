@@ -29,6 +29,7 @@ class User(Base):
         secondary="professor_follows",
         backref="followers"
     )
+    review_votes = relationship("ReviewVote", back_populates="user", cascade="all, delete-orphan")
 
 
     def __repr__(self):

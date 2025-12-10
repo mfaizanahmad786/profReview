@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -12,8 +12,10 @@ class Professor(Base):
     name = Column(String(255), nullable=False, index=True)
     department = Column(String(100), nullable=False)
     
-    # Optional: Professor can claim their profile
-    claimed_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    # Professor claim fields
+    claimed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    is_claimed = Column(Boolean, default=False, nullable=False)
+    claimed_at = Column(DateTime, nullable=True)
     is_verified = Column(Boolean, default=False)
     
     # Aggregate stats (will be calculated from reviews)
@@ -23,6 +25,7 @@ class Professor(Base):
     
     # Relationships
     reviews = relationship("Review", backref="professor", foreign_keys="Review.professor_id")
+    claimed_by = relationship("User", foreign_keys=[claimed_by_user_id])
 
     def __repr__(self):
         return f"<Professor(id={self.id}, name='{self.name}', dept='{self.department}')>"

@@ -53,8 +53,8 @@ export const login = (email, password) => {
   return api.post('/auth/login', formData);
 };
 
-export const signup = (email, password) => {
-  return api.post('/auth/signup', { email, password });
+export const signup = (email, password, role = 'student') => {
+  return api.post('/auth/signup', { email, password, role });
 };
 
 export const getCurrentUser = () => {
@@ -81,6 +81,35 @@ export const getFollowedProfessors = () => {
 // Dashboard API calls
 export const getDashboardData = () => {
   return api.get('/dashboard/me');
+};
+
+// Vote API calls
+export const voteReview = (reviewId) => {
+  return api.post(`/reviews/${reviewId}/vote`);
+};
+
+export const unvoteReview = (reviewId) => {
+  return api.delete(`/reviews/${reviewId}/vote`);
+};
+
+// Professor Claim API calls
+export const submitClaimRequest = (professorId, requestMessage = null) => {
+  return api.post(`/professors/${professorId}/claim-request`, {
+    professor_id: professorId,
+    request_message: requestMessage
+  });
+};
+
+export const getMyClaimStatus = () => {
+  return api.get('/professors/my-claim-status');
+};
+
+export const getMyClaimedProfile = () => {
+  return api.get('/professors/my-claimed-profile');
+};
+
+export const cancelClaimRequest = (claimId) => {
+  return api.delete(`/professors/claim-request/${claimId}`);
 };
 
 export default api;

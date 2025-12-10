@@ -56,10 +56,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async (email, password) => {
+  const signup = async (email, password, role = 'student') => {
     try {
       setError(null);
-      await apiSignup(email, password);
+      await apiSignup(email, password, role);
       
       // Auto login after signup
       return await login(email, password);
