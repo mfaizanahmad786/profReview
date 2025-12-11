@@ -12,7 +12,9 @@ from app.models.user import User, UserRole
 from app.models.review import Review
 from app.models.review_flag import ReviewFlag
 from app.models.professor import Professor
+from app.models.professor_claim_request import ProfessorClaimRequest, ClaimStatus
 from app.schemas.review import ReviewResponse
+from app.schemas.professor_claim import ClaimRequestResponse
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -153,6 +155,140 @@ async def dismiss_flags(
     return {
         "message": "Flags dismissed successfully",
         "review_id": review_id
+    }
+
+
+@router.get("/claim-requests", response_model=List[dict])
+async def get_pending_claim_requests(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Get all pending professor claim requests.
+    Only accessible by admins.
+    """
+    pending_claims = db.query(ProfessorClaimRequest).filter(
+        ProfessorClaimRequest.status == ClaimStatus.PENDING
+    ).order_by(ProfessorClaimRequest.requested_at.desc()).all()
+    
+    result = []
+    for claim in pending_claims:
+        # Get professor info
+        professor = db.query(Professor).filter(Professor.id == claim.professor_id).first()
+        
+        # Get user info
+        user = db.query(User).filter(User.id == claim.user_id).first()
+        
+        result.append({
+            "id": claim.id,
+            "user_id": claim.user_id,
+            "user_email": user.email if user else "Unknown",
+            "professor_id": claim.professor_id,
+            "professor_name": professor.name if professor else "Unknown",
+            "professor_department": professor.department if professor else "Unknown",
+            "request_message": claim.request_message,
+            "status": claim.status.value,
+            "requested_at": claim.requested_at,
+            "reviewed_at": claim.reviewed_at
+        })
+    
+    return result
+
+
+@router.post("/claim-requests/{claim_id}/approve", status_code=status.HTTP_200_OK)
+async def approve_claim_request(
+    claim_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Approve a professor claim request.
+    Only accessible by admins.
+    """
+    claim = db.query(ProfessorClaimRequest).filter(
+        ProfessorClaimRequest.id == claim_id
+    ).first()
+    
+    if not claim:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Claim request not found"
+        )
+    
+    if claim.status != ClaimStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot approve claim with status: {claim.status.value}"
+        )
+    
+    # Check if professor is already claimed by another user
+    existing_claim = db.query(ProfessorClaimRequest).filter(
+        ProfessorClaimRequest.professor_id == claim.professor_id,
+        ProfessorClaimRequest.status == ClaimStatus.APPROVED,
+        ProfessorClaimRequest.id != claim_id
+    ).first()
+    
+    if existing_claim:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This professor profile is already claimed by another user"
+        )
+    
+    # Approve the claim
+    claim.approve(current_user.id)
+    
+    # Update professor's claimed_by_user_id field
+    professor = db.query(Professor).filter(Professor.id == claim.professor_id).first()
+    if professor:
+        professor.claimed_by_user_id = claim.user_id
+        professor.is_claimed = True
+        professor.claimed_at = datetime.utcnow()
+    
+    db.commit()
+    
+    return {
+        "message": "Claim request approved successfully",
+        "claim_id": claim_id,
+        "professor_id": claim.professor_id,
+        "user_id": claim.user_id
+    }
+
+
+@router.post("/claim-requests/{claim_id}/reject", status_code=status.HTTP_200_OK)
+async def reject_claim_request(
+    claim_id: int,
+    admin_comment: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Reject a professor claim request.
+    Only accessible by admins.
+    """
+    claim = db.query(ProfessorClaimRequest).filter(
+        ProfessorClaimRequest.id == claim_id
+    ).first()
+    
+    if not claim:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Claim request not found"
+        )
+    
+    if claim.status != ClaimStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot reject claim with status: {claim.status.value}"
+        )
+    
+    # Reject the claim
+    claim.reject(current_user.id, admin_comment)
+    db.commit()
+    
+    return {
+        "message": "Claim request rejected",
+        "claim_id": claim_id,
+        "admin_comment": admin_comment
     }
 
 

@@ -31,7 +31,7 @@ def create_admin():
         
         print('✅ Admin user created successfully!')
         print('=' * 50)
-        print('Email: admin@test.com')
+        print('Email: admin@university.com')
         print('Password: admin123')
         print('=' * 50)
         print('\n📝 You can now login with these credentials')

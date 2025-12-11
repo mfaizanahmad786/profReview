@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.professor import Professor
 from app.models.professor_follow import ProfessorFollow
 from app.schemas.professor import (
@@ -111,7 +111,14 @@ def follow_professor(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Follow a professor"""
+    """Follow a professor - Only students can follow professors"""
+    # Block professors from following other professors
+    if current_user.role == UserRole.PROFESSOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Professors cannot follow other professors. Only students can follow professors."
+        )
+    
     # Check if professor exists
     professor = db.query(Professor).filter(Professor.id == professor_id).first()
     if not professor:

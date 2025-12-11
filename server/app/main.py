@@ -28,12 +28,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register routers
+# Register routers (order matters - more specific routes first!)
 app.include_router(auth_router)
+app.include_router(professor_claims_router)  # Must be before professors_router
 app.include_router(professors_router)
 app.include_router(reviews_router)
 app.include_router(dashboard_router)
-app.include_router(professor_claims_router)
 app.include_router(admin_router)
 
 
