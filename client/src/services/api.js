@@ -137,5 +137,17 @@ export const dismissFlags = (reviewId) => {
   return api.post(`/admin/reviews/${reviewId}/dismiss-flags`);
 };
 
+export const getPendingClaimRequests = () => {
+  return api.get('/admin/claim-requests');
+};
+
+export const approveClaimRequest = (claimId) => {
+  return api.post(`/admin/claim-requests/${claimId}/approve`);
+};
+
+export const rejectClaimRequest = (claimId, adminComment = null) => {
+  return api.post(`/admin/claim-requests/${claimId}/reject`, { admin_comment: adminComment });
+};
+
 export default api;
 

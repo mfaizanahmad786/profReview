@@ -1,13 +1,22 @@
 import { useState, useEffect } from 'react';
-import { FaFlag, FaTrash, FaCheckCircle } from 'react-icons/fa';
-import { getFlaggedReviews, deleteReviewAsAdmin, dismissFlags } from '../services/api';
+import { FaFlag, FaTrash, FaCheckCircle, FaUserTie, FaTimes } from 'react-icons/fa';
+import { 
+  getFlaggedReviews, 
+  deleteReviewAsAdmin, 
+  dismissFlags,
+  getPendingClaimRequests,
+  approveClaimRequest,
+  rejectClaimRequest 
+} from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('claims'); // 'claims' or 'flags'
   const [flaggedReviews, setFlaggedReviews] = useState([]);
+  const [claimRequests, setClaimRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionInProgress, setActionInProgress] = useState(null);
 
@@ -17,8 +26,33 @@ export default function AdminDashboard() {
       navigate('/');
       return;
     }
-    loadFlaggedReviews();
+    loadData();
   }, [user, navigate]);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        loadClaimRequests(),
+        loadFlaggedReviews()
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadClaimRequests = async () => {
+    try {
+      const response = await getPendingClaimRequests();
+      setClaimRequests(response.data);
+    } catch (error) {
+      console.error('Error loading claim requests:', error);
+      if (error.response?.status === 403) {
+        alert('Access denied. Admin privileges required.');
+        navigate('/');
+      }
+    }
+  };
 
   const loadFlaggedReviews = async () => {
     setIsLoading(true);
@@ -33,6 +67,41 @@ export default function AdminDashboard() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleApproveClaim = async (claimId) => {
+    if (!confirm('Are you sure you want to approve this claim request?')) {
+      return;
+    }
+
+    setActionInProgress(claimId);
+    try {
+      await approveClaimRequest(claimId);
+      setClaimRequests(claimRequests.filter(c => c.id !== claimId));
+      alert('Claim request approved successfully!');
+    } catch (error) {
+      console.error('Error approving claim:', error);
+      alert(error.response?.data?.detail || 'Failed to approve claim');
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  const handleRejectClaim = async (claimId) => {
+    const reason = prompt('Enter reason for rejection (optional):');
+    if (reason === null) return; // User cancelled
+
+    setActionInProgress(claimId);
+    try {
+      await rejectClaimRequest(claimId, reason);
+      setClaimRequests(claimRequests.filter(c => c.id !== claimId));
+      alert('Claim request rejected');
+    } catch (error) {
+      console.error('Error rejecting claim:', error);
+      alert(error.response?.data?.detail || 'Failed to reject claim');
+    } finally {
+      setActionInProgress(null);
     }
   };
 
@@ -85,7 +154,7 @@ export default function AdminDashboard() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading flagged reviews...</div>
+        <div className="text-gray-600">Loading admin dashboard...</div>
       </div>
     );
   }
@@ -96,22 +165,139 @@ export default function AdminDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">Review and moderate flagged content</p>
+          <p className="text-gray-600 mt-2">Manage claim requests and moderate content</p>
         </div>
 
         {/* Stats */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center gap-3">
-            <FaFlag className="text-red-500 text-2xl" />
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{flaggedReviews.length}</h2>
-              <p className="text-gray-600">Flagged Reviews</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3">
+              <FaUserTie className="text-blue-500 text-2xl" />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{claimRequests.length}</h2>
+                <p className="text-gray-600">Pending Claim Requests</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3">
+              <FaFlag className="text-red-500 text-2xl" />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{flaggedReviews.length}</h2>
+                <p className="text-gray-600">Flagged Reviews</p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Flagged Reviews List */}
-        {flaggedReviews.length === 0 ? (
+        {/* Tabs */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('claims')}
+              className={`flex-1 px-6 py-4 text-center font-medium transition ${
+                activeTab === 'claims'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <FaUserTie />
+                <span>Claim Requests ({claimRequests.length})</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('flags')}
+              className={`flex-1 px-6 py-4 text-center font-medium transition ${
+                activeTab === 'flags'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <FaFlag />
+                <span>Flagged Reviews ({flaggedReviews.length})</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Claim Requests Content */}
+        {activeTab === 'claims' && (
+          <>
+            {claimRequests.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <FaCheckCircle className="text-green-500 text-5xl mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Pending Claim Requests</h3>
+                <p className="text-gray-600">All claim requests have been reviewed.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {claimRequests.map((claim) => (
+                  <div key={claim.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    {/* Claim Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">
+                          {claim.professor_name}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Department: {claim.professor_department}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-2">
+                          Requested by: <span className="font-medium">{claim.user_email}</span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 text-yellow-600 rounded-full">
+                        <FaUserTie />
+                        <span className="font-medium">Pending</span>
+                      </div>
+                    </div>
+
+                    {/* Request Message */}
+                    {claim.request_message && (
+                      <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                        <p className="text-sm font-medium text-gray-700 mb-1">Request Message:</p>
+                        <p className="text-gray-600">{claim.request_message}</p>
+                      </div>
+                    )}
+
+                    {/* Metadata */}
+                    <div className="mb-4 text-sm text-gray-500">
+                      <p>Submitted: {formatDate(claim.requested_at)}</p>
+                    </div>
+
+                    {/* Actions - Left aligned and smaller buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleApproveClaim(claim.id)}
+                        disabled={actionInProgress === claim.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition"
+                      >
+                        <FaCheckCircle className="text-xs" />
+                        <span>{actionInProgress === claim.id ? 'Approving...' : 'Approve'}</span>
+                      </button>
+                      <button
+                        onClick={() => handleRejectClaim(claim.id)}
+                        disabled={actionInProgress === claim.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition"
+                      >
+                        <FaTimes className="text-xs" />
+                        <span>{actionInProgress === claim.id ? 'Rejecting...' : 'Reject'}</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Flagged Reviews Content */}
+        {activeTab === 'flags' && (
+          <>
+            {flaggedReviews.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
             <FaCheckCircle className="text-green-500 text-5xl mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No Flagged Reviews</h3>
@@ -206,6 +392,8 @@ export default function AdminDashboard() {
               </div>
             ))}
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

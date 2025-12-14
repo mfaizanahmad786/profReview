@@ -1,9 +1,22 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaGraduationCap, FaSearch, FaUser, FaSignOutAlt } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate to home with search query as state
+      navigate('/', { state: { searchQuery: searchQuery.trim() } });
+      setSearchQuery(''); // Clear search after navigating
+    }
+  };
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
@@ -18,16 +31,18 @@ export default function Navbar() {
           </Link>
 
           {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
+          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-8">
             <div className="relative w-full">
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search professors, departments..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
               />
             </div>
-          </div>
+          </form>
 
           {/* Nav Links */}
           <div className="flex items-center gap-4">

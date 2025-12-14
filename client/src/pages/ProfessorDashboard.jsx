@@ -229,16 +229,7 @@ export default function ProfessorDashboard() {
               </div>
             </div>
 
-            {/* Coming Soon */}
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-100 p-6">
-              <h3 className="font-semibold text-gray-900 mb-2">Coming Soon</h3>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>• Rating trends over time</li>
-                <li>• Most helpful reviews</li>
-                <li>• Grade distribution analytics</li>
-                <li>• Department comparisons</li>
-              </ul>
-            </div>
+           
           </div>
         </div>
       </div>

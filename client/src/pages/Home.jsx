@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FaSearch, FaGraduationCap, FaChartLine, FaStar, FaUsers } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ProfessorCard from '../components/ProfessorCard';
 import { getProfessors } from '../services/api';
 
@@ -9,10 +9,27 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
+  const resultsRef = useRef(null);
 
   useEffect(() => {
     loadProfessors();
   }, []);
+
+  // Listen for search query from Navbar
+  useEffect(() => {
+    if (location.state?.searchQuery) {
+      const query = location.state.searchQuery;
+      setSearchQuery(query);
+      loadProfessors(query);
+      // Scroll to results after search from navbar
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+      // Clear the state to prevent re-triggering on subsequent renders
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const loadProfessors = async (search = '') => {
     try {
@@ -38,6 +55,10 @@ export default function Home() {
   const handleSearch = (e) => {
     e.preventDefault();
     loadProfessors(searchQuery);
+    // Scroll to results after search
+    setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const stats = [
@@ -123,7 +144,7 @@ export default function Home() {
       </section>
 
       {/* Professors Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <section ref={resultsRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">

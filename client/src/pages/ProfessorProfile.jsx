@@ -166,8 +166,9 @@ export default function ProfessorProfile() {
                   </div>
                 </div>
                 
+                {/* Follow button - Only for students, not professors */}
                 <div className="flex items-center gap-2">
-                  {isAuthenticated && (
+                  {isAuthenticated && user?.role !== 'professor' && (
                     <button
                       onClick={handleFollowToggle}
                       disabled={followLoading}

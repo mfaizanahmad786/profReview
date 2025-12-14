@@ -117,10 +117,13 @@ export default function Login() {
         </div>
 
         {/* Additional Info */}
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center text-gray-500">
           <p className="text-sm text-gray-500">
             By signing in, you agree to our Terms of Service and Privacy Policy
           </p>
+          <p>Student: test1@mail.com Password123</p>
+          <p>Professor: professor@university.com Password786</p>
+          <p>Admin: admin@university.com admin123</p>
         </div>
       </div>
     </div>
